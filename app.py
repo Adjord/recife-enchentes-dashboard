@@ -27,23 +27,29 @@ def get_data_api():
     return pd.DataFrame()
 
 def get_history():
-    """Lê o histórico, padroniza a coluna e junta com o novo."""
+    """Lê o histórico de forma robusta, lidando com ficheiros vazios."""
     csv_path = 'historico_chuvas.csv'
     df_novo = get_data_api()
     
-    if os.path.exists(csv_path):
-        df_hist = pd.read_csv(csv_path)
-        # Padronização aqui também, caso o CSV tenha sido salvo com outro nome:
-        df_hist.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
-        
-        df_hist['data_hora'] = pd.to_datetime(df_hist['data_hora'])
-        
-        # Junta o novo com o antigo e remove duplicatas
-        df_full = pd.concat([df_hist, df_novo]).drop_duplicates(subset=['Estação', 'data_hora'])
+    # Verifica se o ficheiro existe E se não está vazio
+    if os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:
+        try:
+            df_hist = pd.read_csv(csv_path)
+            
+            # Padronização de nomes de colunas
+            df_hist.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
+            df_hist['data_hora'] = pd.to_datetime(df_hist['data_hora'])
+            
+            # Junta com os dados novos
+            df_full = pd.concat([df_hist, df_novo]).drop_duplicates(subset=['Estação', 'data_hora'])
+        except Exception as e:
+            st.warning(f"Erro ao ler histórico existente: {e}. Criando novo ficheiro.")
+            df_full = df_novo
     else:
+        # Se o ficheiro não existir ou estiver vazio, começa do zero com o que veio da API
         df_full = df_novo
         
-    # Garante que o arquivo salvo tenha a coluna correta
+    # Garante que o ficheiro seja salvo corretamente
     df_full.to_csv(csv_path, index=False)
     return df_full
 
