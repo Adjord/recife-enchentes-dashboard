@@ -73,8 +73,15 @@ st.set_page_config(page_title="Monitoramento Recife", layout="wide")
 st.title("🌧️ Monitoramento de Chuvas - Recife")
 st.write("Dados históricos e tempo real integrados.")
 
-# Carrega os dados atualizados
+# 1. Carrega os dados atualizados
 df_completo = get_history()
+
+# --- VACINA: Forçar conversão de data aqui ---
+# Mesmo que já tenhamos convertido antes, vamos garantir isso antes do gráfico
+df_completo['data_hora'] = pd.to_datetime(df_completo['data_hora'], errors='coerce')
+# Removemos linhas que não conseguiram ser convertidas (valores nulos ou erros)
+df_completo = df_completo.dropna(subset=['data_hora'])
+# ---------------------------------------------
 
 # Filtro lateral
 st.sidebar.header("Filtros")
@@ -83,11 +90,12 @@ periodo = st.sidebar.selectbox("Período de Visualização:", ['Últimas 24h', '
 # Lógica de Filtro
 if periodo == 'Últimas 24h':
     limite = datetime.now() - timedelta(hours=24)
-    df_plot = df_completo[df_completo['data_hora'] > limite]
+    # Garante que 'limite' também é datetime para comparar com 'data_hora'
+    df_plot = df_completo[df_completo['data_hora'] > pd.to_datetime(limite)]
 else:
     df_plot = df_completo
 
-# Agrupamento para o gráfico (soma da chuva total por hora, para facilitar a visualização)
+# AGORA, com a garantia de que df_plot['data_hora'] é datetime, podemos agrupar
 df_agrupado = df_plot.groupby(df_plot['data_hora'].dt.floor('H'))['chuva_mm'].sum().reset_index()
 
 # Visualização
