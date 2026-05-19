@@ -8,7 +8,7 @@ import plotly.express as px
 
 def get_data_api():
     """Busca dados da API e garante que a coluna de data tem o nome 'data_hora'."""
-    url = "http://dados.recife.pe.gov.br/api/3/action/datastore_search?resource_id=7ccabb3f-1411-4770-aeab-ce151ed59223&limit=100"
+    url = "http://dados.apac.pe.gov.br:41120/cemaden/"
     try:
         response = requests.get(url)
         if response.status_code == 200:
