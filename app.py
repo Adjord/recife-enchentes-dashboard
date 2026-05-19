@@ -96,7 +96,7 @@ else:
     df_plot = df_completo
 
 # AGORA, com a garantia de que df_plot['data_hora'] é datetime, podemos agrupar
-df_agrupado = df_plot.groupby(df_plot['data_hora'].dt.floor('H'))['chuva_mm'].sum().reset_index()
+df_agrupado = df_plot.groupby(df_plot['data_hora'].dt.floor('h'))['chuva_mm'].sum().reset_index()
 
 # Visualização
 st.subheader(f"Precipitação - {periodo}")
