@@ -7,34 +7,43 @@ import streamlit as st
 import plotly.express as px
 
 def get_data_api():
-    """Busca os dados mais recentes da API."""
+    """Busca os dados mais recentes da API e padroniza o nome da coluna."""
     url = "http://dados.recife.pe.gov.br/api/3/action/datastore_search?resource_id=7ccabb3f-1411-4770-aeab-ce151ed59223&limit=100"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             records = response.json()['result']['records']
             df = pd.DataFrame(records)
-            # Extraindo o valor de chuva do JSON na coluna 'Dados_completos'
+            
+            # Padronização aqui:
+            df.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
+            
             df['chuva_mm'] = df['Dados_completos'].apply(lambda x: json.loads(x).get('chuva', 0))
-            df['data_hora'] = pd.to_datetime(df['Data-hora'])
+            df['data_hora'] = pd.to_datetime(df['data_hora'])
             return df[['Estação', 'data_hora', 'chuva_mm']]
-    except:
-        return pd.DataFrame() # Retorna vazio se der erro
+    except Exception as e:
+        st.error(f"Erro ao buscar API: {e}")
+        return pd.DataFrame() 
     return pd.DataFrame()
 
 def get_history():
-    """Lê o histórico, junta com o novo da API e salva."""
+    """Lê o histórico, padroniza a coluna e junta com o novo."""
     csv_path = 'historico_chuvas.csv'
     df_novo = get_data_api()
     
     if os.path.exists(csv_path):
         df_hist = pd.read_csv(csv_path)
+        # Padronização aqui também, caso o CSV tenha sido salvo com outro nome:
+        df_hist.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
+        
         df_hist['data_hora'] = pd.to_datetime(df_hist['data_hora'])
+        
         # Junta o novo com o antigo e remove duplicatas
         df_full = pd.concat([df_hist, df_novo]).drop_duplicates(subset=['Estação', 'data_hora'])
     else:
         df_full = df_novo
         
+    # Garante que o arquivo salvo tenha a coluna correta
     df_full.to_csv(csv_path, index=False)
     return df_full
 
