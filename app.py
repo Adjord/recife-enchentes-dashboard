@@ -12,18 +12,32 @@ def get_data_api():
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            registros = response.json()['result']['records']
-            df = pd.DataFrame(registros)
+            # O retorno é uma lista direta de dicionários, não um dicionário com 'result'
+            dados = response.json()
+            df = pd.DataFrame(dados)
             
-            # Renomeação forçada imediata
+            if df.empty:
+                return pd.DataFrame(columns=['Estação', 'data_hora', 'chuva_mm'])
+            
+            # Renomeação forçada para padronizar
             df.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
             
-            # Verifica se a coluna existe, se não, cria vazia para não quebrar
-            if 'data_hora' not in df.columns:
-                df['data_hora'] = pd.NaT
-                
-            df['chuva_mm'] = df['Dados_completos'].apply(lambda x: json.loads(x).get('chuva', 0))
+            # Tratamento da coluna 'Dados_completos' (que contém um JSON dentro da string)
+            def extrair_chuva(x):
+                try:
+                    # x é uma string representando um JSON
+                    dicionario = json.loads(x)
+                    # Retorna o valor de 'chuva', convertendo para float
+                    return float(dicionario.get('chuva', 0))
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    return 0.0
+
+            df['chuva_mm'] = df['Dados_completos'].apply(extrair_chuva)
+            
+            # Conversão segura de datas
             df['data_hora'] = pd.to_datetime(df['data_hora'], errors='coerce')
+            
+            # Retorna apenas as colunas necessárias
             return df[['Estação', 'data_hora', 'chuva_mm']]
     except Exception as e:
         st.error(f"Erro ao ler API: {e}")
