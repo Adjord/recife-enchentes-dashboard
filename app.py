@@ -7,50 +7,64 @@ import streamlit as st
 import plotly.express as px
 
 def get_data_api():
-    """Busca os dados mais recentes da API e padroniza o nome da coluna."""
+    """Busca dados da API e garante que a coluna de data tem o nome 'data_hora'."""
     url = "http://dados.recife.pe.gov.br/api/3/action/datastore_search?resource_id=7ccabb3f-1411-4770-aeab-ce151ed59223&limit=100"
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            records = response.json()['result']['records']
-            df = pd.DataFrame(records)
+            registros = response.json()['result']['records']
+            df = pd.DataFrame(registros)
             
-            # Padronização aqui:
+            # Renomeação forçada imediata
             df.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
             
+            # Verifica se a coluna existe, se não, cria vazia para não quebrar
+            if 'data_hora' not in df.columns:
+                df['data_hora'] = pd.NaT
+                
             df['chuva_mm'] = df['Dados_completos'].apply(lambda x: json.loads(x).get('chuva', 0))
-            df['data_hora'] = pd.to_datetime(df['data_hora'])
+            df['data_hora'] = pd.to_datetime(df['data_hora'], errors='coerce')
             return df[['Estação', 'data_hora', 'chuva_mm']]
     except Exception as e:
-        st.error(f"Erro ao buscar API: {e}")
-        return pd.DataFrame() 
-    return pd.DataFrame()
+        st.error(f"Erro ao ler API: {e}")
+    return pd.DataFrame(columns=['Estação', 'data_hora', 'chuva_mm'])
 
 def get_history():
-    """Lê o histórico de forma robusta, lidando com ficheiros vazios."""
+    """Lê o histórico, garante nomes de colunas e junta com o novo."""
     csv_path = 'historico_chuvas.csv'
     df_novo = get_data_api()
     
-    # Verifica se o ficheiro existe E se não está vazio
+    # Lista de colunas esperadas
+    cols_esperadas = ['Estação', 'data_hora', 'chuva_mm']
+    
     if os.path.exists(csv_path) and os.path.getsize(csv_path) > 0:
         try:
             df_hist = pd.read_csv(csv_path)
-            
-            # Padronização de nomes de colunas
+            # Renomeação forçada para garantir padrão
             df_hist.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
-            df_hist['data_hora'] = pd.to_datetime(df_hist['data_hora'])
             
-            # Junta com os dados novos
-            df_full = pd.concat([df_hist, df_novo]).drop_duplicates(subset=['Estação', 'data_hora'])
+            # Garantir que df_hist tem as colunas certas
+            for col in cols_esperadas:
+                if col not in df_hist.columns:
+                    df_hist[col] = None
+            
+            df_hist['data_hora'] = pd.to_datetime(df_hist['data_hora'], errors='coerce')
+            
+            # Junta tudo
+            df_full = pd.concat([df_hist[cols_esperadas], df_novo[cols_esperadas]]).drop_duplicates()
         except Exception as e:
-            st.warning(f"Erro ao ler histórico existente: {e}. Criando novo ficheiro.")
+            st.warning(f"Erro ao processar CSV: {e}. Usando apenas dados da API.")
             df_full = df_novo
     else:
-        # Se o ficheiro não existir ou estiver vazio, começa do zero com o que veio da API
         df_full = df_novo
         
-    # Garante que o ficheiro seja salvo corretamente
+    # Salva o arquivo final com cabeçalhos padrão
     df_full.to_csv(csv_path, index=False)
+    
+    # Segurança extra: se mesmo assim não tiver a coluna, o app avisa em vez de quebrar
+    if 'data_hora' not in df_full.columns:
+        st.error("ERRO: Coluna 'data_hora' não encontrada. Verifique o CSV.")
+        
     return df_full
 
 
