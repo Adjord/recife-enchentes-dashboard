@@ -86,18 +86,6 @@ st.set_page_config(page_title="Monitoramento Recife", layout="wide")
 
 st.title("🌧️ Monitoramento de Chuvas - Recife")
 st.write("Dados históricos e tempo real integrados.")
-# --- DEBUG: Ver o que a API está trazendo ---
-st.write("### Debug: Dados Brutos da API")
-df_debug = get_data_api()
-st.write(f"Linhas retornadas pela API: {len(df_debug)}")
-st.dataframe(df_debug.head())
-
-# --- DEBUG: Ver o histórico carregado ---
-st.write("### Debug: Histórico Carregado")
-df_hist_debug = get_history()
-st.write(f"Total de linhas no histórico total: {len(df_hist_debug)}")
-st.write(f"Intervalo de datas: {df_hist_debug['data_hora'].min()} até {df_hist_debug['data_hora'].max()}")
-# ---- fim debug ----
 
 # 1. Carrega os dados atualizados
 df_completo = get_history()
