@@ -97,13 +97,7 @@ df_completo['data_hora'] = pd.to_datetime(df_completo['data_hora'], errors='coer
 df_completo = df_completo.dropna(subset=['data_hora'])
 # ---------------------------------------------
 
-# Lógica de Filtro
-if periodo == 'Últimas 24h':
-    limite = datetime.now() - timedelta(hours=24)
-    # Garante que 'limite' também é datetime para comparar com 'data_hora'
-    df_plot = df_completo[df_completo['data_hora'] > pd.to_datetime(limite)]
-else:
-    df_plot = df_completo
+df_plot = df_completo
 
 # AGORA, com a garantia de que df_plot['data_hora'] é datetime, podemos agrupar
 df_agrupado = df_plot.groupby(df_plot['data_hora'].dt.floor('h'))['chuva_mm'].sum().reset_index()
