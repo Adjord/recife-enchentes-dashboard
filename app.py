@@ -97,10 +97,6 @@ df_completo['data_hora'] = pd.to_datetime(df_completo['data_hora'], errors='coer
 df_completo = df_completo.dropna(subset=['data_hora'])
 # ---------------------------------------------
 
-# Filtro lateral
-st.sidebar.header("Filtros")
-periodo = st.sidebar.selectbox("Período de Visualização:", ['Últimas 24h', 'Histórico Completo'])
-
 # Lógica de Filtro
 if periodo == 'Últimas 24h':
     limite = datetime.now() - timedelta(hours=24)
@@ -120,4 +116,4 @@ fig = px.bar(df_agrupado, x='data_hora', y='chuva_mm',
 st.plotly_chart(fig, use_container_width=True)
 
 st.write("### Dados Brutos")
-st.dataframe(df_plot.sort_values(by='data_hora', ascending=False).head(10))
+st.dataframe(df_plot.sort_values(by='data_hora', ascending=False))
