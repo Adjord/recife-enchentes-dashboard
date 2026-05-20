@@ -103,7 +103,7 @@ df_plot = df_completo
 df_agrupado = df_plot.groupby(df_plot['data_hora'].dt.floor('h'))['chuva_mm'].sum().reset_index()
 
 # Visualização
-st.subheader(f"Precipitação - {periodo}")
+st.subheader(f"Precipitação")
 fig = px.bar(df_agrupado, x='data_hora', y='chuva_mm', 
              labels={'chuva_mm': 'Chuva (mm)', 'data_hora': 'Hora/Data'},
              color_discrete_sequence=['#1f77b4'])
