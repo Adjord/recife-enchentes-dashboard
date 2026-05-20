@@ -7,38 +7,41 @@ import streamlit as st
 import plotly.express as px
 
 def get_data_api():
-    """Busca dados da API e garante que a coluna de data tem o nome 'data_hora'."""
     url = "http://dados.apac.pe.gov.br:41120/cemaden/"
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            # O retorno é uma lista direta de dicionários, não um dicionário com 'result'
             dados = response.json()
             df = pd.DataFrame(dados)
             
             if df.empty:
                 return pd.DataFrame(columns=['Estação', 'data_hora', 'chuva_mm'])
             
-            # Renomeação forçada para padronizar
             df.rename(columns={'Data-hora': 'data_hora'}, inplace=True)
             
-            # Tratamento da coluna 'Dados_completos' (que contém um JSON dentro da string)
-            def extrair_chuva(x):
+            # Função para extrair chuva E cidade
+            def extrair_info(x):
                 try:
-                    # x é uma string representando um JSON
                     dicionario = json.loads(x)
-                    # Retorna o valor de 'chuva', convertendo para float
-                    return float(dicionario.get('chuva', 0))
-                except (ValueError, TypeError, json.JSONDecodeError):
-                    return 0.0
+                    chuva = float(dicionario.get('chuva', 0))
+                    cidade = str(dicionario.get('cidade', '')).upper()
+                    return chuva, cidade
+                except:
+                    return 0.0, ''
 
-            df['chuva_mm'] = df['Dados_completos'].apply(extrair_chuva)
+            # Aplica a extração criando duas colunas novas
+            df[['chuva_mm', 'cidade']] = df['Dados_completos'].apply(
+                lambda x: pd.Series(extrair_info(x))
+            )
             
-            # Conversão segura de datas
+            # FILTRO: Mantém apenas Recife
+            # Nota: O banco da APAC às vezes usa 'RECIFE' ou 'RECIFE - APAC'
+            # Vamos filtrar pelo que contém "RECIFE" para garantir
+            df = df[df['cidade'].str.contains('RECIFE', na=False)]
+            
             df['data_hora'] = pd.to_datetime(df['data_hora'], errors='coerce')
-            
-            # Retorna apenas as colunas necessárias
             return df[['Estação', 'data_hora', 'chuva_mm']]
+            
     except Exception as e:
         st.error(f"Erro ao ler API: {e}")
     return pd.DataFrame(columns=['Estação', 'data_hora', 'chuva_mm'])
